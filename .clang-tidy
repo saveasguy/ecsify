@@ -1,0 +1,17 @@
+---
+Checks: >
+  -*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  google-*,
+  misc-*,
+  performance-*,
+  readability-*,
+  -modernize-use-trailing-return-type
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+FormatStyle: file
+CheckOptions:
+  - key:   cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: 'true'
+...

@@ -1,0 +1,10 @@
+.vscode
+.venv
+__pycache__
+CMakeFiles
+CMakeCache.txt
+.doit.db
+
+build*
+
+CMakeUserPresets.json
