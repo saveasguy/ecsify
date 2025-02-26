@@ -14,6 +14,6 @@ RUN apt install -y \
 COPY requirements.txt ./
 RUN pip3 install -r requirements.txt
 COPY conanfile.txt ./
-RUN conan profile detect && conan install . --build=missing -s build_type=${BUILD_TYPE}
+RUN conan profile detect && conan install . --build=missing -s build_type=${BUILD_TYPE} -s compiler.cppstd=20
 
 COPY . ./
