@@ -10,20 +10,9 @@ class World final {
  public:
   template <class... WithComponents>
   using With = World<Components..., WithComponents...>;
-};
 
-template <>
-class World<> final {
- public:
-  template <class... WithComponents>
-  using With = World<WithComponents...>;
+  constexpr static std::size_t kNumComponentTypes = sizeof...(Components);
 };
-
-template <class... Components>
-constexpr std::size_t numSupportedComponents(
-    const World<Components...>& /*unused*/) {
-  return sizeof...(Components);
-}
 
 }  // namespace ecsify
 
