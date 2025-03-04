@@ -3,39 +3,24 @@
 
 #include <cstddef>
 
-#include "internal/utils.h"
-
 namespace ecsify {
 
 template <class... Components>
-class ComponentsxEntities {
+class ComponentsEntities {
  public:
-  constexpr static std::size_t kNumComponentTypes = sizeof...(Components);
+  static constexpr std::size_t kNumSupportedComponents = sizeof...(Components);
 };
 
-template <class... Ts>
-struct Components {
-  template <class... MoreTs>
-  using x = Components<Ts..., MoreTs...>;
-
-  using xEntities = ComponentsxEntities<Ts...>;
+template <class... Components>
+class World : public ComponentsEntities<Components...> {
+ public:
+  using CE = ComponentsEntities<Components...>;
 };
 
-template <class T>
-concept ComponentsxEntitiesSpecialization =
-    internal::is_template_specialization_v<T, ComponentsxEntities>;
-
-template <class T>
-concept ComponentsxEntitiesLike = ComponentsxEntitiesSpecialization<T> ||
-    internal::is_base_of_template_v<ComponentsxEntities, std::decay_t<T>>;
-
-template <ComponentsxEntitiesSpecialization CxE>
-class World : public CxE {};
-
-template <ComponentsxEntitiesLike CxE>
-constexpr std::size_t numComponentTypes(CxE&& /* unused */) {
-  return std::decay_t<CxE>::kNumComponentTypes;
-}
+struct MakeWorld final {
+  template <class... Components>
+  using WithComponents = World<Components...>;
+};
 
 }  // namespace ecsify
 
