@@ -1,3 +1,3 @@
-add_library(ecssify
-    entity.cc
+add_library(ecsify
+    entity_pool.cc
 )

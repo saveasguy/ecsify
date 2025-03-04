@@ -10,10 +10,9 @@ struct Velocity {
   float x, y;
 };
 
-using MyCxE = ecsify::Components<Position, Velocity>::xEntities;
+using MyWorld = ecsify::MakeWorld::WithComponents<Position, Velocity>;
 
 int main() {
-  ecsify::World<MyCxE> world;
-  std::cout << "We created a world with " << ecsify::numComponentTypes(world)
-            << " supported components" << std::endl;
+  MyWorld world{};
+  return 0;
 }

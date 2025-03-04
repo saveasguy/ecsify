@@ -4,18 +4,12 @@
 
 #include "ecsify/world.h"
 
-using xE = ecsify::Components<>::xEntities;
-using BoolxE = ecsify::Components<bool>::xEntities;
-using BoolIntxE = ecsify::Components<bool>::x<int>::xEntities;
+using DummyWorld = ecsify::MakeWorld::WithComponents<>;
+using BoolWorld = ecsify::MakeWorld::WithComponents<bool>;
+using BoolIntWorld = ecsify::MakeWorld::WithComponents<bool, int>;
 
 TEST(WorldTests, TestNumComponentTypes) {
-  ASSERT_EQ(xE::kNumComponentTypes, 0);
-  ASSERT_EQ(BoolxE::kNumComponentTypes, 1);
-  ASSERT_EQ(BoolIntxE::kNumComponentTypes, 2);
-  ecsify::World<xE> dummy_world;
-  ecsify::World<BoolxE> bool_world;
-  ecsify::World<BoolIntxE> bool_int_world;
-  ASSERT_EQ(ecsify::numComponentTypes(dummy_world), 0);
-  ASSERT_EQ(BoolxE::kNumComponentTypes, 1);
-  ASSERT_EQ(BoolIntxE::kNumComponentTypes, 2);
+  ASSERT_EQ(DummyWorld::kNumSupportedComponents, 0);
+  ASSERT_EQ(BoolWorld::kNumSupportedComponents, 1);
+  ASSERT_EQ(BoolIntWorld::kNumSupportedComponents, 2);
 }
