@@ -1,7 +1,12 @@
 #include <ecsify/internal/entity_pool.h>
 
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <utility>
+
+#include "ecsify/entity.h"
 
 namespace {
 
@@ -17,53 +22,63 @@ namespace ecsify::internal {
 
 EntityPool::EntityPool(std::size_t num_component_types)
     : entities_{GetEntityDataInitializer(num_component_types)},
-      next_entity_id_{0},
-      kNumComponentTypes{num_component_types} {}
+      next_entity_id_{0} {}
 
 Entity EntityPool::Add() {
-  std::size_t handle = entities_.Insert(MakeDummyEntityData());
-  entities_[handle].id(next_entity_id_);
-  return Entity{next_entity_id_++, handle};
+  std::int64_t unique_id = next_entity_id_++;
+  std::size_t handle =
+      entities_.Insert(MakeNonAllocEntityData(unique_id));
+  return Entity{unique_id, handle};
 }
 
-void EntityPool::Remove(Entity entity) { entities_.Erase(entity.kHandle); }
+void EntityPool::Remove(Entity entity) { entities_.Erase(entity.handle()); }
 
 bool EntityPool::Alive(Entity entity) const noexcept {
-  const EntityData *data = entities_.At(entity.kHandle);
-  return data && data->id() == entity.kID;
+  const EntityData *data = entities_.At(entity.handle());
+  return data && data->id() == entity.id();
 }
 
 void EntityPool::Link(Entity entity, std::size_t component_type) noexcept {
   if (!Alive(entity)) {
     return;
   }
-  entities_[entity.kHandle].Link(component_type);
+  entities_[entity.handle()].Link(component_type);
 }
 
 void EntityPool::Unlink(Entity entity, std::size_t component_type) noexcept {
   if (!Alive(entity)) {
     return;
   }
-  entities_[entity.kHandle].Unlink(component_type);
+  entities_[entity.handle()].Unlink(component_type);
 }
 
 bool EntityPool::Has(Entity entity, std::size_t component_type) const noexcept {
-  const EntityData *data = entities_.At(entity.kHandle);
+  const EntityData *data = entities_.At(entity.handle());
   return data && data->Has(component_type);
 }
 
-EntityData MakeDummyEntityData() { return EntityData{EntityData::DummyTag{}}; }
+EntityData MakeNonAllocEntityData(std::int64_t unique_id) {
+  return EntityData{unique_id, EntityData::NonAllocTag{}};
+}
 
-EntityData::EntityData() : id_{-1}, is_dummy_{true} {}
+EntityData::EntityData() : id_{-1}, is_non_alloc_{false} {}
 
-EntityData::EntityData(EntityData::DummyTag /* unused */)
-    : id_{-1}, is_dummy_{true} {}
+EntityData::EntityData(std::int64_t unique_id,
+                       EntityData::NonAllocTag /* unused */)
+    : id_{unique_id}, is_non_alloc_{true} {}
 
 EntityData::EntityData(std::size_t num_component_types)
-    : component_types_(num_component_types, false), id_{-1}, is_dummy_{false} {}
+    : component_types_(num_component_types, false),
+      id_{-1},
+      is_non_alloc_{false} {}
 
 EntityData &EntityData::operator=(const EntityData &other) {
-  if (other.is_dummy_) {
+  if (this == &other) {
+    return *this;
+  }
+  if (other.is_non_alloc_) {
+    UnlinkAll_();
+    id_ = other.id_;
     return *this;
   }
   EntityData copy = other;
@@ -72,12 +87,17 @@ EntityData &EntityData::operator=(const EntityData &other) {
 }
 
 EntityData &EntityData::operator=(EntityData &&other) noexcept {
-  if (other.is_dummy_ || this == &other) {
+  if (this == &other) {
+    return *this;
+  }
+  if (other.is_non_alloc_) {
+    UnlinkAll_();
+    id_ = other.id_;
     return *this;
   }
   component_types_ = std::move(other.component_types_);
   id_ = other.id_;
-  is_dummy_ = other.is_dummy_;
+  is_non_alloc_ = false;
   return *this;
 }
 
@@ -91,13 +111,13 @@ void EntityData::Unlink(std::size_t component_type) noexcept {
   component_types_[component_type] = false;
 }
 
-void EntityData::UnlinkAll() noexcept {
-  std::fill(component_types_.begin(), component_types_.end(), false);
-}
-
 bool EntityData::Has(std::size_t component_type) const noexcept {
   assert(component_type < component_types_.size() && "Unknown component type");
   return component_types_[component_type];
+}
+
+void EntityData::UnlinkAll_() noexcept {
+  std::fill(component_types_.begin(), component_types_.end(), false);
 }
 
 }  // namespace ecsify::internal

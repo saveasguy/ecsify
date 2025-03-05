@@ -22,26 +22,26 @@ class EntityData final {
 
   void Link(std::size_t component_type) noexcept;
   void Unlink(std::size_t component_type) noexcept;
-  void UnlinkAll() noexcept;
   bool Has(std::size_t component_type) const noexcept;
 
   std::int64_t id() const noexcept { return id_; }
-  void id(std::int64_t new_id) noexcept { id_ = new_id; }
 
  private:
-  friend EntityData MakeDummyEntityData();
+  friend EntityData MakeNonAllocEntityData(std::int64_t);
 
-  struct DummyTag {};
+  struct NonAllocTag {};
 
   // Constructs dummy entity data, which is ignored when copied/moved.
-  explicit EntityData(DummyTag);
+  explicit EntityData(std::int64_t unique_id, NonAllocTag);
+
+  void UnlinkAll_() noexcept;
 
   std::vector<bool> component_types_;
   std::int64_t id_;
-  bool is_dummy_;
+  bool is_non_alloc_;
 };
 
-EntityData MakeDummyEntityData();
+EntityData MakeNonAllocEntityData(std::int64_t unique_id);
 
 class EntityPool {
  public:
@@ -64,7 +64,6 @@ class EntityPool {
  private:
   internal::DataPool<EntityData> entities_;
   std::int64_t next_entity_id_;
-  const std::size_t kNumComponentTypes;
 };
 
 }  // namespace ecsify::internal

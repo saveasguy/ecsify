@@ -1,12 +1,16 @@
 #include <benchmark/benchmark.h>
+#include <ecsify/entity.h>
 
 #include <ranges>
+#include <vector>
 
 #include "ecsify/internal/entity_pool.h"
 
+namespace {
+
 constexpr benchmark::IterationCount kMaxIterations = 1000000;
 
-static void BM_FillColdEntityPool(benchmark::State &state) {
+void BM_FillColdEntityPool(benchmark::State &state) {
   ecsify::internal::EntityPool pool(0);
   for (auto _ : state) {
     pool.Add();
@@ -14,7 +18,7 @@ static void BM_FillColdEntityPool(benchmark::State &state) {
 }
 BENCHMARK(BM_FillColdEntityPool)->Iterations(kMaxIterations)->Repetitions(4);
 
-static void BM_FillWarmEntityPool(benchmark::State &state) {
+void BM_FillWarmEntityPool(benchmark::State &state) {
   ecsify::internal::EntityPool pool(0);
   std::vector<ecsify::Entity> entities;
   entities.reserve(state.max_iterations);
@@ -30,7 +34,7 @@ static void BM_FillWarmEntityPool(benchmark::State &state) {
 }
 BENCHMARK(BM_FillWarmEntityPool)->Iterations(kMaxIterations)->Repetitions(4);
 
-static void BM_EntityPoolRemove(benchmark::State &state) {
+void BM_EntityPoolRemove(benchmark::State &state) {
   ecsify::internal::EntityPool pool(0);
   std::vector<ecsify::Entity> entities;
   entities.reserve(state.max_iterations);
@@ -44,7 +48,7 @@ static void BM_EntityPoolRemove(benchmark::State &state) {
 }
 BENCHMARK(BM_EntityPoolRemove)->Iterations(kMaxIterations)->Repetitions(4);
 
-static void BM_EntityPoolAddRemove(benchmark::State &state) {
+void BM_EntityPoolAddRemove(benchmark::State &state) {
   ecsify::internal::EntityPool pool(0);
   for (auto _ : state) {
     ecsify::Entity entity = pool.Add();
@@ -52,3 +56,5 @@ static void BM_EntityPoolAddRemove(benchmark::State &state) {
   }
 }
 BENCHMARK(BM_EntityPoolAddRemove)->Iterations(kMaxIterations)->Repetitions(4);
+
+}  // namespace

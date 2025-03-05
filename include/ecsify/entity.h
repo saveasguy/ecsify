@@ -1,17 +1,22 @@
 #ifndef ECSIFY_INCLUDE_ECSIFY_ENTITY_H_
 #define ECSIFY_INCLUDE_ECSIFY_ENTITY_H_
 
+#include <cstddef>
 #include <cstdint>
-#include <type_traits>
-#include <vector>
-
-#include "internal/data_pool.h"
 
 namespace ecsify {
 
-struct Entity final {
-  const std::int64_t kID;
-  const std::size_t kHandle;
+class Entity final {
+ public:
+  Entity(std::int64_t unique_id, std::size_t entity_handle)
+      : id_{unique_id}, handle_{entity_handle} {}
+
+  std::int64_t id() const noexcept { return id_; }
+  std::size_t handle() const noexcept { return handle_; }
+
+ private:
+  std::int64_t id_;
+  std::size_t handle_;
 };
 
 }  // namespace ecsify

@@ -8,7 +8,9 @@ Checks: >
   performance-*,
   readability-*,
   -modernize-use-trailing-return-type,
-  -readability-implicit-bool-conversion
+  -readability-implicit-bool-conversion,
+  -clang-analyzer-deadcode*,
+  -
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle: file
@@ -17,4 +19,8 @@ CheckOptions:
     value: true
   - key:   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
     value: true
+  - key:   readability-identifier-length.IgnoredVariableNames
+    value: '_'
+  - key:   misc-const-correctness.AnalyzeValues
+    value: false
 ...

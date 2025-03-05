@@ -1,7 +1,5 @@
 #include <ecsify/world.h>
 
-#include <iostream>
-
 struct Position {
   float x, y;
 };
