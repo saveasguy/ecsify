@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "ecsify/entity.h"
 #include "ecsify/internal/entity_pool.h"
 
 TEST(EntityPoolTests, Add) {
@@ -32,6 +33,10 @@ TEST(EntityPoolTests, Link) {
   pool.Link(entity, 1);
   ASSERT_TRUE(pool.Has(entity, 0));
   ASSERT_TRUE(pool.Has(entity, 1));
+  pool.Remove(entity);
+  entity = pool.Add();
+  ASSERT_FALSE(pool.Has(entity, 0));
+  ASSERT_FALSE(pool.Has(entity, 1));
 }
 
 TEST(EntityPoolTests, Unlink) {

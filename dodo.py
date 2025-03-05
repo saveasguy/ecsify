@@ -8,7 +8,7 @@ build_path_param = {
     "name": "build_path",
     "short": "b",
     "long": "build-path",
-    "default": "build",
+    "default": "build/Debug",
 }
 
 disable_examples_param = {
@@ -31,20 +31,24 @@ test_param = {
     "default": "coverage",
 }
 
+disable_benchmarks_param = {
+    "name": "disable_benchmarks",
+    "long": "disable-benchmarks",
+    "type": bool,
+    "default": True,
+}
 
-def _build_type(build_path: str) -> str:
-    for file in Path(build_path).iterdir():
-        if file.is_dir() and file.name == "Debug":
-            return "Debug"
-    return "Release"
 
-
-@task_params([build_path_param, disable_examples_param, test_param])
-def task_config(build_path: str, disable_examples: bool, test: str):
+@task_params(
+    [build_path_param, disable_examples_param, test_param, disable_benchmarks_param]
+)
+def task_config(
+    build_path: str, disable_examples: bool, test: str, disable_benchmarks: bool
+):
     """configure the project"""
-    build_type = _build_type(build_path)
+    build_type = Path(build_path).name
     cmd = (
-        f"cmake -S . -B {build_path}/{build_type}"
+        f"cmake -S . -B {build_path}"
         + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
         + " -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake"
     )
@@ -57,6 +61,8 @@ def task_config(build_path: str, disable_examples: bool, test: str):
     else:
         cmd += ' -DCMAKE_CXX_FLAGS="-coverage"'
     cmd += " -DCMAKE_BUILD_TYPE=" + build_type
+    if disable_benchmarks:
+        cmd += " -DECSIFY_BUILD_BENCHMARKS=OFF"
     return {
         "actions": [cmd],
         "verbosity": 2,
@@ -68,8 +74,7 @@ def task_config(build_path: str, disable_examples: bool, test: str):
 def task_build(build_path: str):
     """build the project"""
     return {
-        "actions": [f"cmake --build {build_path}/{_build_type(build_path)} --parallel"],
-        "task_dep": ["config"],
+        "actions": [f"cmake --build {build_path} --parallel"],
         "verbosity": 2,
         "title": title_with_actions,
     }
@@ -91,11 +96,10 @@ def task_lint(build_path: str):
     sources = " ".join(source_files())
     return {
         "actions": [
-            f"clang-tidy -p {build_path}/{_build_type(build_path)} {sources}",
+            f"clang-tidy-18 -p {build_path} {sources}",
             "cpplint --root=.. " + sources,
-            "clang-format --dry-run -Werror " + sources,
+            "clang-format-18 --dry-run -Werror " + sources,
         ],
-        "task_dep": ["config"],
         "title": title_with_actions,
     }
 
@@ -104,8 +108,7 @@ def task_lint(build_path: str):
 def task_test(build_path: str):
     """run tests"""
     return {
-        "actions": [f"ctest --test-dir {build_path}/{_build_type(build_path)}/tests"],
-        "task_dep": ["build"],
+        "actions": [f"ctest --test-dir {build_path}/tests"],
         "verbosity": 2,
         "title": title_with_actions,
     }

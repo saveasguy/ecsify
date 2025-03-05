@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cstddef>
+
 #include "ecsify/internal/data_pool.h"
 
 TEST(DataPoolTests, ContainsInserted) {

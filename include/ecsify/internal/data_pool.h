@@ -6,19 +6,18 @@
 #include <bit>
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iostream>
 #include <limits>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace ecsify::internal {
 
 template <class T>
-requires(std::default_initializable<T>) const
-    auto kDefaultCtor = []() { return T(); };
+  requires(std::default_initializable<T>)
+const auto kDefaultCtor = []() { return T(); };
 
 template <class T>
 concept DataPoolCompatible = std::default_initializable<T> && std::copyable<T>;
@@ -35,7 +34,8 @@ concept DataPoolCompatible = std::default_initializable<T> && std::copyable<T>;
  * elements are called only when the DataPool is destructed.
  */
 template <class T>
-requires(DataPoolCompatible<T>) class DataPool final {
+  requires(DataPoolCompatible<T>)
+class DataPool final {
  public:
   explicit DataPool(std::function<T()> initializer = kDefaultCtor<T>)
       : initializer_{initializer} {}

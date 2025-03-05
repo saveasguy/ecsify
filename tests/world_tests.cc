@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <iostream>
-
 #include "ecsify/world.h"
 
 using DummyWorld = ecsify::MakeWorld::WithComponents<>;
