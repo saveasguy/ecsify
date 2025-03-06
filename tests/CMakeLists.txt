@@ -10,6 +10,10 @@ add_executable(ecsify_tests
     entity_pool_tests.cc
     world_tests.cc
 )
+if(${ECSIFY_ENABLE_COVERAGE})
+    target_compile_options(ecsify_tests PRIVATE -coverage)
+    target_link_options(ecsify_tests PRIVATE -coverage)
+endif()
 target_link_libraries(ecsify_tests PRIVATE
     gtest::gtest
     ecsify
