@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Iterator
 
 from doit import task_params
 from doit.tools import title_with_actions
@@ -16,7 +17,7 @@ disable_examples_param = {
     "long": "disable-examples",
     "type": bool,
     "default": False,
-    "help": "do not build examples",
+    "help": "don't build examples",
 }
 
 test_param = {
@@ -28,14 +29,15 @@ test_param = {
         ("on", "enable testing"),
         ("coverage", "enable testing with code coverage"),
     ),
-    "default": "coverage",
+    "default": "on",
 }
 
 disable_benchmarks_param = {
     "name": "disable_benchmarks",
     "long": "disable-benchmarks",
     "type": bool,
-    "default": True,
+    "default": False,
+    "help": "don't build benchmarks",
 }
 
 
@@ -55,11 +57,9 @@ def task_config(
     if disable_examples:
         cmd += " -DECSIFY_BUILD_EXAMPLES=OFF"
     if test == "off":
-        cmd += " -DECSIFY_ENABLE_TESTING=OFF"
-    elif test == "on":
-        cmd += " -DECSIFY_ENABLE_COVERAGE=OFF"
-    else:
-        cmd += ' -DCMAKE_CXX_FLAGS="-coverage"'
+        cmd += " -DECSIFY_ENABLE_TESTING=OFF -DECSIFY_ENABLE_COVERAGE=OFF"
+    elif test == "coverage":
+        cmd += " -DECSIFY_ENABLE_COVERAGE=ON"
     cmd += " -DCMAKE_BUILD_TYPE=" + build_type
     if disable_benchmarks:
         cmd += " -DECSIFY_BUILD_BENCHMARKS=OFF"
@@ -84,12 +84,24 @@ def task_build(build_path: str):
 def task_lint(build_path: str):
     """run C++ linters and static analyzers"""
 
-    def source_files():
+    def source_files() -> Iterator[str]:
+        src_dirs = frozenset(
+            (
+                Path("benchmarks"),
+                Path("examples"),
+                Path("include"),
+                Path("src"),
+                Path("tests"),
+            )
+        )
+        cxx_extensions = frozenset((".h", ".cc"))
         for root, _, files in os.walk("."):
-            root_path = Path(root)
+            root = Path(root)
+            if not any(root.is_relative_to(dir) for dir in src_dirs):
+                continue
             for file in files:
-                file_path = root_path / file
-                if file_path.suffix in {".h", ".cc"}:
+                file_path = root / file
+                if file_path.suffix in cxx_extensions:
                     yield str(file_path)
         return
 

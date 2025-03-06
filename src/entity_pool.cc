@@ -117,7 +117,7 @@ bool EntityData::Has(std::size_t component_type) const noexcept {
 }
 
 void EntityData::UnlinkAll_() noexcept {
-  std::fill(component_types_.begin(), component_types_.end(), false);
+  std::ranges::fill(component_types_, false);
 }
 
 }  // namespace ecsify::internal
