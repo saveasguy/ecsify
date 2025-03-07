@@ -40,16 +40,17 @@ class MaskGuidedIterator {
   }
 
   reference operator*() const {
-    assert((mask_ & 1) && "Dereferencing disabled iterator");
+    assert((mask_ & 1) == 0 && "Dereferencing disabled iterator");
     return *it_;
   }
+
   pointer operator->() const {
-    assert((mask_ & 1) && "Dereferencing disabled iterator");
+    assert((mask_ & 1) == 0 && "Dereferencing disabled iterator");
     return &(*it_);
   }
 
   MaskGuidedIterator &operator++() {
-    assert((mask_ & 1) && "Incrementing disabled iterator");
+    assert((mask_ & 1) == 0 && "Incrementing disabled iterator");
     ++it_;
     mask_ >>= 1;
     SkipDisabled();
@@ -57,7 +58,7 @@ class MaskGuidedIterator {
   }
 
   MaskGuidedIterator operator++(int) {
-    assert((mask_ & 1) && "Incrementing disabled iterator");
+    assert((mask_ & 1) == 0 && "Incrementing disabled iterator");
     MaskGuidedIterator tmp = *this;
     ++(*this);
     return tmp;
@@ -154,9 +155,7 @@ class Bucket final {
     return MaskGuidedIterator{data_.begin(), free_elements_mask_};
   }
 
-  Iterator end() noexcept {
-    return MaskGuidedIterator{data_.end(), Mask{}};
-  }
+  Iterator end() noexcept { return MaskGuidedIterator{data_.end(), Mask{}}; }
 
   ConstIterator begin() const noexcept {
     return MaskGuidedIterator{data_.begin(), free_elements_mask_};
@@ -177,6 +176,84 @@ class Bucket final {
   Mask free_elements_mask_ = std::numeric_limits<Mask>::max();
 };
 
+template <class T>
+  requires(std::input_or_output_iterator<T>)
+using IteratorValueType = typename std::iterator_traits<T>::value_type;
+
+template <class T>
+concept ContainerLike = requires(T c) {
+  { std::begin(c) } -> std::input_or_output_iterator;
+  { std::end(c) } -> std::input_or_output_iterator;
+};
+
+template <class T>
+  requires(ContainerLike<T>)
+using ContainerIteratorType = decltype(std::begin(std::declval<T>()));
+
+template <class OuterIterT>
+  requires(std::forward_iterator<OuterIterT> &&
+           ContainerLike<IteratorValueType<OuterIterT>> &&
+           std::forward_iterator<
+               ContainerIteratorType<IteratorValueType<OuterIterT>>>)
+class FlattenedIterator {
+ public:
+  using InnerIterT = ContainerIteratorType<typename std::iterator_traits<OuterIterT>::reference>;
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = IteratorValueType<InnerIterT>;
+  using difference_type =
+      typename std::iterator_traits<InnerIterT>::difference_type;
+  using pointer = typename std::iterator_traits<InnerIterT>::pointer;
+  using reference = typename std::iterator_traits<InnerIterT>::reference;
+
+  FlattenedIterator() : outer_it_{}, outer_end_{}, inner_it_{} {}
+
+  FlattenedIterator(OuterIterT outer_it, OuterIterT outer_end,
+                    InnerIterT inner_it = InnerIterT{})
+      : outer_it_{outer_it}, outer_end_{outer_end}, inner_it_{inner_it} {}
+
+  reference operator*() const { return *inner_it_; }
+
+  pointer operator->() const { return &(*inner_it_); }
+
+  FlattenedIterator &operator++() {
+    ++inner_it_;
+    if (inner_it_ == std::end(*outer_it_)) {
+      ++outer_it_;
+      if (outer_it_ != outer_end_) {
+        inner_it_ = std::begin(*outer_it_);
+      }
+    }
+    return *this;
+  }
+
+  FlattenedIterator operator++(int) {
+    FlattenedIterator tmp = *this;
+    ++(*this);
+    return tmp;
+  }
+
+  bool Equals(const FlattenedIterator &other) const {
+    return outer_it_ == other.outer_it_ && inner_it_ == other.inner_it_;
+  }
+
+ private:
+  OuterIterT outer_it_;
+  OuterIterT outer_end_;
+  InnerIterT inner_it_;
+};
+
+template <class OuterIterT>
+bool operator==(const FlattenedIterator<OuterIterT> &lhs,
+                const FlattenedIterator<OuterIterT> &rhs) {
+  return lhs.Equals(rhs);
+}
+
+template <class OuterIterT>
+bool operator!=(const FlattenedIterator<OuterIterT> &lhs,
+                const FlattenedIterator<OuterIterT> &rhs) {
+  return !lhs.Equals(rhs);
+}
+
 /**
  * @brief An unordered data structure which stores elements in a contiguous
  * array. It supports indexing and all operations (insertion, deletion,
@@ -191,6 +268,10 @@ class Bucket final {
 template <class T>
 class DataPool final {
  public:
+  using Iterator = FlattenedIterator<typename std::vector<Bucket<T>>::iterator>;
+  using ConstIterator =
+      FlattenedIterator<typename std::vector<Bucket<T>>::const_iterator>;
+
   explicit DataPool(std::function<T()> initializer = kDefaultCtor<T>)
       : initializer_{initializer} {}
 
@@ -304,6 +385,38 @@ class DataPool final {
    * checking.
    */
   const T &operator[](std::size_t idx) const noexcept { return UnsafeAt(idx); }
+
+  Iterator begin() noexcept {
+    if (buckets_.empty()) {
+      return FlattenedIterator{buckets_.begin(), buckets_.end()};
+    }
+    return FlattenedIterator{buckets_.begin(), buckets_.end(),
+                             buckets_.front().begin()};
+  }
+
+  Iterator end() noexcept {
+    if (buckets_.empty()) {
+      return FlattenedIterator{buckets_.end(), buckets_.end()};
+    }
+    return FlattenedIterator{buckets_.end(), buckets_.end(),
+                             buckets_.back().end()};
+  }
+
+  ConstIterator begin() const noexcept {
+    if (buckets_.empty()) {
+      return FlattenedIterator{buckets_.begin(), buckets_.end()};
+    }
+    return FlattenedIterator{buckets_.begin(), buckets_.end(),
+                             buckets_.front().begin()};
+  }
+
+  ConstIterator end() const noexcept {
+    if (buckets_.empty()) {
+      return FlattenedIterator{buckets_.end(), buckets_.end()};
+    }
+    return FlattenedIterator{buckets_.end(), buckets_.end(),
+                             buckets_.back().end()};
+  }
 
  private:
   T &UnsafeAt(std::size_t idx) noexcept {

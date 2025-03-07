@@ -11,7 +11,7 @@ namespace {
 constexpr benchmark::IterationCount kMaxIterations = 1000000;
 
 void BM_FillColdEntityPool(benchmark::State &state) {
-  ecsify::internal::EntityPool pool(0);
+  ecsify::internal::EntityPool pool{0};
   for (auto _ : state) {
     pool.Add();
   }
@@ -19,7 +19,7 @@ void BM_FillColdEntityPool(benchmark::State &state) {
 BENCHMARK(BM_FillColdEntityPool)->Iterations(kMaxIterations)->Repetitions(4);
 
 void BM_FillWarmEntityPool(benchmark::State &state) {
-  ecsify::internal::EntityPool pool(0);
+  ecsify::internal::EntityPool pool{0};
   std::vector<ecsify::Entity> entities;
   entities.reserve(state.max_iterations);
   for (auto _ : std::views::iota(0, state.max_iterations)) {
@@ -35,7 +35,7 @@ void BM_FillWarmEntityPool(benchmark::State &state) {
 BENCHMARK(BM_FillWarmEntityPool)->Iterations(kMaxIterations)->Repetitions(4);
 
 void BM_EntityPoolRemove(benchmark::State &state) {
-  ecsify::internal::EntityPool pool(0);
+  ecsify::internal::EntityPool pool{0};
   std::vector<ecsify::Entity> entities;
   entities.reserve(state.max_iterations);
   for (auto _ : std::views::iota(0, state.max_iterations)) {
@@ -49,7 +49,7 @@ void BM_EntityPoolRemove(benchmark::State &state) {
 BENCHMARK(BM_EntityPoolRemove)->Iterations(kMaxIterations)->Repetitions(4);
 
 void BM_EntityPoolAddRemove(benchmark::State &state) {
-  ecsify::internal::EntityPool pool(0);
+  ecsify::internal::EntityPool pool{0};
   for (auto _ : state) {
     ecsify::Entity entity = pool.Add();
     pool.Remove(entity);
