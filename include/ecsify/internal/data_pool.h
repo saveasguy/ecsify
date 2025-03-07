@@ -9,68 +9,86 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <utility>
 #include <vector>
 
 namespace ecsify::internal {
 
+// An iterator that adnvances to the next element based on the mask.
+// If the bit is set, the iteration is skipped. Otherwise, the iterator advances
+// as usual.
 template <typename IteratorT, typename MaskT>
-class MaskedIterator {
+  requires(std::bidirectional_iterator<IteratorT>)
+class MaskGuidedIterator {
  public:
-  using iterator_category = typename std::iterator_traits<Iterator>::iterator_category;
-  using value_type = typename std::iterator_traits<Iterator>::value_type;
-  using difference_type = typename std::iterator_traits<Iterator>::difference_type;
-  using pointer = typename std::iterator_traits<Iterator>::pointer;
-  using reference = typename std::iterator_traits<Iterator>::reference;
-
   using Iterator = IteratorT;
   using Mask = MaskT;
 
-  MaskedIterator(Iterator it, Mask mask)
-      : it_(it), mask_(mask) {
-    advanceToValid();
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = typename std::iterator_traits<Iterator>::value_type;
+  using difference_type =
+      typename std::iterator_traits<Iterator>::difference_type;
+  using pointer = typename std::iterator_traits<Iterator>::pointer;
+  using reference = typename std::iterator_traits<Iterator>::reference;
+
+  MaskGuidedIterator() : it_{}, mask_{} {};
+
+  MaskGuidedIterator(Iterator iter, Mask mask) : it_(iter), mask_(mask) {
+    SkipDisabled();
   }
 
-  reference operator*() const { return *it_; }
-  pointer operator->() const { return &(*it_); }
+  reference operator*() const {
+    assert((mask_ & 1) && "Dereferencing disabled iterator");
+    return *it_;
+  }
+  pointer operator->() const {
+    assert((mask_ & 1) && "Dereferencing disabled iterator");
+    return &(*it_);
+  }
 
-  MaskedIterator& operator++() {
+  MaskGuidedIterator &operator++() {
+    assert((mask_ & 1) && "Incrementing disabled iterator");
     ++it_;
-    ++index_;
-    advanceToValid();
+    mask_ >>= 1;
+    SkipDisabled();
     return *this;
   }
 
-  MaskedIterator operator++(int) {
-    MaskedIterator tmp = *this;
+  MaskGuidedIterator operator++(int) {
+    assert((mask_ & 1) && "Incrementing disabled iterator");
+    MaskGuidedIterator tmp = *this;
     ++(*this);
     return tmp;
   }
 
-  friend bool operator==(const MaskedIterator& a, const MaskedIterator& b) {
-    return a.it_ == b.it_;
-  }
-
-  friend bool operator!=(const MaskedIterator& a, const MaskedIterator& b) {
-    return !(a == b);
+  bool Equals(const MaskGuidedIterator &other) const {
+    return it_ == other.it_;
   }
 
  private:
-  void advanceToValid() {
-    while (it_ != Iterator() && !isBitSet(index_)) {
-      ++it_;
-      ++index_;
-    }
-  }
-
-  bool isBitSet(std::size_t idx) const {
-    return (mask_ & (static_cast<std::uint64_t>(1) << idx)) != 0;
+  void SkipDisabled() {
+    std::size_t shift = std::countr_one(mask_);
+    it_ += shift;
+    mask_ >>= shift;
   }
 
   Iterator it_;
   Mask mask_;
 };
+
+template <class IterT, class MaskT>
+bool operator==(const MaskGuidedIterator<IterT, MaskT> &lhs,
+                const MaskGuidedIterator<IterT, MaskT> &rhs) {
+  return lhs.Equals(rhs);
+}
+
+template <class IterT, class MaskT>
+bool operator!=(const MaskGuidedIterator<IterT, MaskT> &lhs,
+                const MaskGuidedIterator<IterT, MaskT> &rhs) {
+  return !lhs.Equals(rhs);
+}
 
 template <class T>
   requires(std::default_initializable<T>)
@@ -80,7 +98,16 @@ template <class T>
   requires(std::default_initializable<T> && std::copyable<T>)
 class Bucket final {
  public:
+  static consteval std::size_t Capacity() noexcept {
+    return std::numeric_limits<Mask>::digits;
+  }
+
   using Mask = std::uint64_t;
+  using Iterator =
+      MaskGuidedIterator<typename std::array<T, Capacity()>::iterator, Mask>;
+  using ConstIterator =
+      MaskGuidedIterator<typename std::array<T, Capacity()>::const_iterator,
+                         Mask>;
 
   explicit Bucket(const T &val) { std::ranges::fill(data_, val); }
 
@@ -123,8 +150,20 @@ class Bucket final {
 
   bool Full() const noexcept { return free_elements_mask_ == 0; }
 
-  static consteval std::size_t Capacity() noexcept {
-    return std::numeric_limits<Mask>::digits;
+  Iterator begin() noexcept {
+    return MaskGuidedIterator{data_.begin(), free_elements_mask_};
+  }
+
+  Iterator end() noexcept {
+    return MaskGuidedIterator{data_.end(), Mask{}};
+  }
+
+  ConstIterator begin() const noexcept {
+    return MaskGuidedIterator{data_.begin(), free_elements_mask_};
+  }
+
+  ConstIterator end() const noexcept {
+    return MaskGuidedIterator{data_.end(), Mask{}};
   }
 
  private:
@@ -229,7 +268,7 @@ class DataPool final {
    * @return A pointer to the element if it exists, otherwise nullptr.
    */
   T *At(std::size_t idx) noexcept {
-    return Contains(idx) ? &UnsafeAt_(idx) : nullptr;
+    return Contains(idx) ? &UnsafeAt(idx) : nullptr;
   }
 
   /**
@@ -239,7 +278,7 @@ class DataPool final {
    * @return A pointer to the element if it exists, otherwise nullptr.
    */
   const T *At(std::size_t idx) const noexcept {
-    return Contains(idx) ? &UnsafeAt_(idx) : nullptr;
+    return Contains(idx) ? &UnsafeAt(idx) : nullptr;
   }
 
   /**
@@ -252,7 +291,7 @@ class DataPool final {
    * It assumes that the element exists and does not perform any bounds
    * checking.
    */
-  T &operator[](std::size_t idx) noexcept { return UnsafeAt_(idx); }
+  T &operator[](std::size_t idx) noexcept { return UnsafeAt(idx); }
 
   /**
    * @brief Returns a reference to the element at the specified index.
@@ -264,7 +303,7 @@ class DataPool final {
    * It assumes that the element exists and does not perform any bounds
    * checking.
    */
-  const T &operator[](std::size_t idx) const noexcept { return UnsafeAt_(idx); }
+  const T &operator[](std::size_t idx) const noexcept { return UnsafeAt(idx); }
 
  private:
   T &UnsafeAt(std::size_t idx) noexcept {
