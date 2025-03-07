@@ -1,9 +1,9 @@
 #include <benchmark/benchmark.h>
-#include <ecsify/entity.h>
 
 #include <ranges>
 #include <vector>
 
+#include "ecsify/entity.h"
 #include "ecsify/internal/entity_pool.h"
 
 namespace {

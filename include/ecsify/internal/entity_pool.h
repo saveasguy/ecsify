@@ -34,7 +34,7 @@ class EntityData final {
   // Constructs dummy entity data, which is ignored when copied/moved.
   explicit EntityData(std::int64_t unique_id, NonAllocTag);
 
-  void UnlinkAll_() noexcept;
+  void UnlinkAll() noexcept;
 
   std::vector<bool> component_types_;
   std::int64_t id_;
