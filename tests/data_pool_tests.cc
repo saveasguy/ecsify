@@ -194,3 +194,49 @@ TEST(DataPoolTests, InsertionIsCorrectAfterErasure) {
   ASSERT_EQ(*pool.At(idx2), 2);
   ASSERT_TRUE(pool.Contains(idx1));
 }
+
+TEST(DataPoolTests, NumIterationsIsCorrect) {
+  constexpr std::size_t kCapacity = 512;
+  for (std::size_t size : std::views::iota(0UZ, kCapacity + 1)) {
+    ecsify::internal::DataPool<int> pool{};
+    for (std::size_t _ : std::views::iota(0UZ, size)) {
+      pool.Insert(0);
+    }
+    const auto &pool_cref = pool;
+    ASSERT_EQ(std::distance(pool.begin(), pool.end()), size);
+    ASSERT_EQ(std::distance(pool_cref.begin(), pool_cref.end()), size);
+    ASSERT_EQ(std::ranges::distance(pool), size);
+    ASSERT_EQ(std::ranges::distance(pool_cref), size);
+  }
+}
+
+TEST(DataPoolTests, AllValuesAreIterated) {
+  constexpr std::size_t kCapacity = 512;
+  std::set<std::size_t> vals;
+  ecsify::internal::DataPool<std::size_t> pool{};
+  std::vector<std::size_t> indices;
+  // First, check if all the values are iterated.
+  for (std::size_t i = 0; i < kCapacity; ++i) {
+    std::size_t val = i * 2;
+    vals.insert(val);
+    indices.push_back(pool.Insert(val));
+  }
+  for (std::size_t val : pool) {
+    ASSERT_TRUE(vals.contains(val));
+  }
+  for (std::size_t val : vals) {
+    ASSERT_NE(std::ranges::find(pool, val), pool.end());
+  }
+  // Then remove half of the elements and check again.
+  auto is_even = [](std::size_t num) { return num % 2 == 0; };
+  for (std::size_t removed_idx : indices | std::views::filter(is_even)) {
+    vals.erase(pool[removed_idx]);
+    pool.Erase(removed_idx);
+  }
+  for (std::size_t val : pool) {
+    ASSERT_TRUE(vals.contains(val));
+  }
+  for (std::size_t val : vals) {
+    ASSERT_NE(std::ranges::find(pool, val), pool.end());
+  }
+}
