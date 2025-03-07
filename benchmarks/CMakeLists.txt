@@ -5,6 +5,7 @@ if(NOT benchmark_FOUND OR NOT ${GTest_FOUND})
 endif()
 
 add_executable(ecsify_benchmarks
+    data_pool_benchmarks.cc
     entity_pool_benchmarks.cc
 )
 

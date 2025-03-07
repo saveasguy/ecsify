@@ -20,7 +20,7 @@ CheckOptions:
   - key:   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
     value: true
   - key:   readability-identifier-length.IgnoredVariableNames
-    value: '_'
+    value: '^[ijk_]$'
   - key:   misc-const-correctness.AnalyzeValues
     value: false
 ...

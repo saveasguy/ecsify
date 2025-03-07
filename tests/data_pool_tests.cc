@@ -1,6 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstddef>
+#include <iterator>
+#include <ranges>
+#include <set>
+#include <vector>
 
 #include "ecsify/internal/data_pool.h"
 
@@ -34,7 +39,8 @@ TEST(BucketTests, InsertionIsCorrect) {
 
 TEST(BucketTests, FullWhenCapacityReached) {
   ecsify::internal::Bucket<std::size_t> bucket{0};
-  for (std::size_t i = 0; i < ecsify::internal::Bucket<std::size_t>::Capacity(); ++i) {
+  for (std::size_t i = 0; i < ecsify::internal::Bucket<std::size_t>::Capacity();
+       ++i) {
     ASSERT_FALSE(bucket.Full());
     bucket.Insert(i);
   }
@@ -70,6 +76,53 @@ TEST(BucketTests, InsertionIsCorrectAfterErasure) {
   ASSERT_TRUE(bucket.Contains(idx2));
   ASSERT_EQ(bucket[idx2], 3);
   ASSERT_TRUE(bucket.Contains(idx1));
+}
+
+TEST(BucketTests, NumIterationsIsCorrect) {
+  constexpr std::size_t kCapacity = ecsify::internal::Bucket<int>::Capacity();
+  for (std::size_t size : std::views::iota(0UZ, kCapacity + 1)) {
+    ecsify::internal::Bucket<int> bucket{0};
+    for (std::size_t _ : std::views::iota(0UZ, size)) {
+      bucket.Insert(0);
+    }
+    const auto &bucket_cref = bucket;
+    ASSERT_EQ(std::distance(bucket.begin(), bucket.end()), size);
+    ASSERT_EQ(std::distance(bucket_cref.begin(), bucket_cref.end()), size);
+    ASSERT_EQ(std::ranges::distance(bucket), size);
+    ASSERT_EQ(std::ranges::distance(bucket_cref), size);
+  }
+}
+
+TEST(BucketTests, AllValuesAreIterated) {
+  constexpr std::size_t kCapacity =
+      ecsify::internal::Bucket<std::size_t>::Capacity();
+  std::set<std::size_t> vals;
+  ecsify::internal::Bucket<std::size_t> bucket{0};
+  std::vector<std::size_t> indices;
+  // First, check if all the values are iterated.
+  for (std::size_t i = 0; i < kCapacity; ++i) {
+    std::size_t val = i * 2;
+    vals.insert(val);
+    indices.push_back(bucket.Insert(val));
+  }
+  for (std::size_t val : bucket) {
+    ASSERT_TRUE(vals.contains(val));
+  }
+  for (std::size_t val : vals) {
+    ASSERT_NE(std::ranges::find(bucket, val), bucket.end());
+  }
+  // Then remove half of the elements and check again.
+  auto is_even = [](std::size_t num) { return num % 2 == 0; };
+  for (std::size_t removed_idx : indices | std::views::filter(is_even)) {
+    vals.erase(bucket[removed_idx]);
+    bucket.Erase(removed_idx);
+  }
+  for (std::size_t val : bucket) {
+    ASSERT_TRUE(vals.contains(val));
+  }
+  for (std::size_t val : vals) {
+    ASSERT_NE(std::ranges::find(bucket, val), bucket.end());
+  }
 }
 
 TEST(DataPoolTests, ContainsInserted) {
