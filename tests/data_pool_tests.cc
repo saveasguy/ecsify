@@ -4,6 +4,74 @@
 
 #include "ecsify/internal/data_pool.h"
 
+TEST(BucketTests, ContainsInserted) {
+  ecsify::internal::Bucket<int> bucket{0};
+  std::size_t idx0 = bucket.Insert(1);
+  ASSERT_TRUE(bucket.Contains(idx0));
+  std::size_t idx1 = bucket.Insert(2);
+  ASSERT_TRUE(bucket.Contains(idx1));
+  // Test lvalue insertion.
+  int val2 = 3;
+  std::size_t idx2 = bucket.Insert(val2);
+  ASSERT_TRUE(bucket.Contains(idx2));
+  int val3 = 4;
+  std::size_t idx3 = bucket.Insert(val3);
+  ASSERT_TRUE(bucket.Contains(idx3));
+}
+
+TEST(BucketTests, InsertionIsCorrect) {
+  ecsify::internal::Bucket<int> bucket{0};
+  std::size_t idx0 = bucket.Insert(1);
+  ASSERT_EQ(bucket[idx0], 1);
+  std::size_t idx1 = bucket.Insert(2);
+  ASSERT_EQ(bucket[idx0], 1);
+  ASSERT_EQ(bucket[idx1], 2);
+  // Test const version of operator[]. Results should be identical.
+  const auto &bucket_cref = bucket;
+  ASSERT_EQ(bucket_cref[idx0], bucket[idx0]);
+  ASSERT_EQ(bucket_cref[idx1], bucket[idx1]);
+}
+
+TEST(BucketTests, FullWhenCapacityReached) {
+  ecsify::internal::Bucket<std::size_t> bucket{0};
+  for (std::size_t i = 0; i < ecsify::internal::Bucket<std::size_t>::Capacity(); ++i) {
+    ASSERT_FALSE(bucket.Full());
+    bucket.Insert(i);
+  }
+  ASSERT_TRUE(bucket.Full());
+}
+
+TEST(BucketTests, DoesntContainNotInserted) {
+  ecsify::internal::Bucket<int> bucket{0};
+  ASSERT_FALSE(bucket.Contains(0));
+  ASSERT_FALSE(bucket.Contains(1));
+  bucket.Insert(1);
+  ASSERT_FALSE(bucket.Contains(1));
+}
+
+TEST(BucketTests, ErasureIsCorrect) {
+  ecsify::internal::Bucket<int> bucket{0};
+  std::size_t idx0 = bucket.Insert(1);
+  std::size_t idx1 = bucket.Insert(2);
+  bucket.Erase(idx0);
+  ASSERT_FALSE(bucket.Contains(idx0));
+  ASSERT_TRUE(bucket.Contains(idx1));
+  ASSERT_EQ(bucket[idx1], 2);
+  bucket.Erase(idx1);
+  ASSERT_FALSE(bucket.Contains(idx1));
+}
+
+TEST(BucketTests, InsertionIsCorrectAfterErasure) {
+  ecsify::internal::Bucket<int> bucket{0};
+  std::size_t idx0 = bucket.Insert(1);
+  std::size_t idx1 = bucket.Insert(2);
+  bucket.Erase(idx0);
+  std::size_t idx2 = bucket.Insert(3);
+  ASSERT_TRUE(bucket.Contains(idx2));
+  ASSERT_EQ(bucket[idx2], 3);
+  ASSERT_TRUE(bucket.Contains(idx1));
+}
+
 TEST(DataPoolTests, ContainsInserted) {
   ecsify::internal::DataPool<int> pool;
   std::size_t idx0 = pool.Insert(0);

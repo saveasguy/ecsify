@@ -77,7 +77,7 @@ EntityData &EntityData::operator=(const EntityData &other) {
     return *this;
   }
   if (other.is_non_alloc_) {
-    UnlinkAll_();
+    UnlinkAll();
     id_ = other.id_;
     return *this;
   }
@@ -91,7 +91,7 @@ EntityData &EntityData::operator=(EntityData &&other) noexcept {
     return *this;
   }
   if (other.is_non_alloc_) {
-    UnlinkAll_();
+    UnlinkAll();
     id_ = other.id_;
     return *this;
   }
@@ -116,7 +116,7 @@ bool EntityData::Has(std::size_t component_type) const noexcept {
   return component_types_[component_type];
 }
 
-void EntityData::UnlinkAll_() noexcept {
+void EntityData::UnlinkAll() noexcept {
   std::ranges::fill(component_types_, false);
 }
 
