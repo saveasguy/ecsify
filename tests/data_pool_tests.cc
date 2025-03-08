@@ -240,3 +240,21 @@ TEST(DataPoolTests, AllValuesAreIterated) {
     ASSERT_NE(std::ranges::find(pool, val), pool.end());
   }
 }
+
+TEST(DataPoolTests, Stability) {
+  constexpr std::size_t kCapacity = 512;
+  ecsify::internal::DataPool<std::size_t> pool1{};
+  ecsify::internal::DataPool<std::size_t> pool2{};
+  std::vector<std::size_t> indices;
+  for (std::size_t i = 0; i < kCapacity; ++i) {
+    std::size_t val = i * 2;
+    indices.push_back(pool1.Insert(val));
+    ASSERT_EQ(pool2.Insert(val), indices.back());
+  }
+  auto is_even = [](std::size_t num) { return num % 2 == 0; };
+  for (std::size_t removed_idx : indices | std::views::filter(is_even)) {
+    pool1.Erase(removed_idx);
+    pool2.Erase(removed_idx);
+  }
+  ASSERT_TRUE(std::ranges::equal(pool1, pool2));
+}
