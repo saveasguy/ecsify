@@ -197,7 +197,8 @@ template <class OuterIterT>
                ContainerIteratorType<IteratorValueType<OuterIterT>>>)
 class FlattenedIterator {
  public:
-  using InnerIterT = ContainerIteratorType<typename std::iterator_traits<OuterIterT>::reference>;
+  using InnerIterT = ContainerIteratorType<
+      typename std::iterator_traits<OuterIterT>::reference>;
   using iterator_category = std::forward_iterator_tag;
   using value_type = IteratorValueType<InnerIterT>;
   using difference_type =
@@ -255,9 +256,9 @@ bool operator!=(const FlattenedIterator<OuterIterT> &lhs,
 }
 
 /**
- * @brief An unordered stable data structure which stores elements in a contiguous
- * array. It supports indexing and all operations (insertion, deletion,
- * indexing) takes O(1).
+ * @brief An unordered stable data structure which stores elements in a
+ * contiguous array. It supports indexing and all operations (insertion,
+ * deletion, indexing) takes O(1).
  *
  * @tparam T The type of theTInit() elements.
  * @tparam TInit is a callable object for default initalization of the elements.
@@ -343,23 +344,21 @@ class DataPool final {
   }
 
   /**
-   * @brief Returns a pointer to the element at the specified index.
+   * @brief Returns a reference to the element at the specified index.
    *
    * @param idx The index of the element.
-   * @return A pointer to the element if it exists, otherwise nullptr.
-   */
-  T *At(std::size_t idx) noexcept {
-    return Contains(idx) ? &UnsafeAt(idx) : nullptr;
-  }
-
-  /**
-   * @brief Returns a pointer to the element at the specified index.
+   * @return A reference to the element.
    *
-   * @param idx The index of the element.
-   * @return A pointer to the element if it exists, otherwise nullptr.
+   * This method returns a reference to the element at the specified index.
+   * It assumes that the element exists and does not perform any bounds
+   * checking.
    */
-  const T *At(std::size_t idx) const noexcept {
-    return Contains(idx) ? &UnsafeAt(idx) : nullptr;
+  T &operator[](std::size_t idx) noexcept {
+    std::size_t bucket_idx = idx / Bucket<T>::Capacity();
+    std::size_t bucket_offset = idx % Bucket<T>::Capacity();
+    Bucket<T> &bucket = buckets_[bucket_idx];
+    assert(bucket.Contains(bucket_offset) && "Element doesn't exist");
+    return bucket[bucket_offset];
   }
 
   /**
@@ -372,19 +371,13 @@ class DataPool final {
    * It assumes that the element exists and does not perform any bounds
    * checking.
    */
-  T &operator[](std::size_t idx) noexcept { return UnsafeAt(idx); }
-
-  /**
-   * @brief Returns a reference to the element at the specified index.
-   *
-   * @param idx The index of the element.
-   * @return A reference to the element.
-   *
-   * This method returns a reference to the element at the specified index.
-   * It assumes that the element exists and does not perform any bounds
-   * checking.
-   */
-  const T &operator[](std::size_t idx) const noexcept { return UnsafeAt(idx); }
+  const T &operator[](std::size_t idx) const noexcept {
+    std::size_t bucket_idx = idx / Bucket<T>::Capacity();
+    std::size_t bucket_offset = idx % Bucket<T>::Capacity();
+    const Bucket<T> &bucket = buckets_[bucket_idx];
+    assert(bucket.Contains(bucket_offset) && "Element doesn't exist");
+    return bucket[bucket_offset];
+  }
 
   Iterator begin() noexcept {
     if (buckets_.empty()) {
@@ -419,22 +412,6 @@ class DataPool final {
   }
 
  private:
-  T &UnsafeAt(std::size_t idx) noexcept {
-    std::size_t bucket_idx = idx / Bucket<T>::Capacity();
-    std::size_t bucket_offset = idx % Bucket<T>::Capacity();
-    Bucket<T> &bucket = buckets_[bucket_idx];
-    assert(bucket.Contains(bucket_offset) && "Element doesn't exist");
-    return bucket[bucket_offset];
-  }
-
-  const T &UnsafeAt(std::size_t idx) const noexcept {
-    std::size_t bucket_idx = idx / Bucket<T>::Capacity();
-    std::size_t bucket_offset = idx % Bucket<T>::Capacity();
-    const Bucket<T> &bucket = buckets_[bucket_idx];
-    assert(bucket.Contains(bucket_offset) && "Element doesn't exist");
-    return bucket[bucket_offset];
-  }
-
   std::vector<Bucket<T>> buckets_;
   std::vector<std::size_t> partially_filled_buckets_;
   std::function<T()> initializer_;
