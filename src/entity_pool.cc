@@ -26,16 +26,17 @@ EntityPool::EntityPool(std::size_t num_component_types)
 
 Entity EntityPool::Add() {
   std::int64_t unique_id = next_entity_id_++;
-  std::size_t handle =
-      entities_.Insert(MakeNonAllocEntityData(unique_id));
+  std::size_t handle = entities_.Insert(MakeNonAllocEntityData(unique_id));
   return Entity{unique_id, handle};
 }
 
 void EntityPool::Remove(Entity entity) { entities_.Erase(entity.handle()); }
 
 bool EntityPool::Alive(Entity entity) const noexcept {
-  const EntityData *data = entities_.At(entity.handle());
-  return data && data->id() == entity.id();
+  if (!entities_.Contains(entity.handle())) {
+    return false;
+  }
+  return entities_[entity.handle()].id() == entity.id();
 }
 
 void EntityPool::Link(Entity entity, std::size_t component_type) noexcept {
@@ -53,8 +54,7 @@ void EntityPool::Unlink(Entity entity, std::size_t component_type) noexcept {
 }
 
 bool EntityPool::Has(Entity entity, std::size_t component_type) const noexcept {
-  const EntityData *data = entities_.At(entity.handle());
-  return data && data->Has(component_type);
+  return entities_[entity.handle()].Has(component_type);
 }
 
 EntityData MakeNonAllocEntityData(std::int64_t unique_id) {
