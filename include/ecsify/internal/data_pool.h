@@ -255,7 +255,7 @@ bool operator!=(const FlattenedIterator<OuterIterT> &lhs,
 }
 
 /**
- * @brief An unordered data structure which stores elements in a contiguous
+ * @brief An unordered stable data structure which stores elements in a contiguous
  * array. It supports indexing and all operations (insertion, deletion,
  * indexing) takes O(1).
  *
