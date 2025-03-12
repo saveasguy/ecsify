@@ -3,23 +3,60 @@
 
 #include <cstddef>
 
+#include "ecsify/component.h"
+#include "ecsify/entity.h"
+
 namespace ecsify {
 
-template <class... Components>
-class ComponentsEntities {
+class World {
  public:
-  static constexpr std::size_t kNumSupportedComponents = sizeof...(Components);
-};
+  // Create new entity.
+  virtual Entity Add() = 0;
+  // Remove the entity.
+  virtual void Remove(Entity entity) = 0;
+  // Check if entity is alive.
+  virtual bool Alive(Entity entity) const = 0;
 
-template <class... Components>
-class World : public ComponentsEntities<Components...> {
- public:
-  using CE = ComponentsEntities<Components...>;
-};
+  // Add component to the entity.
+  template <class Component>
+    requires(!std::is_same_v<Component, Entity>)
+  void Add(Entity entity) {
+    return Add(entity, Component::TypeID());
+  }
 
-struct MakeWorld final {
-  template <class... Components>
-  using WithComponents = World<Components...>;
+  template <class Component>
+    requires(!std::is_same_v<Component, Entity>)
+  Component &Get(Entity entity) {
+    return static_cast<Component &>(Get(entity, Component::TypeID()));
+  }
+
+  template <class Component>
+  const Component &Get(Entity entity) const {
+    return static_cast<const Component &>(Get(entity, Component::TypeID()));
+  }
+
+  // Check if an entity has the component.
+  template <class Component>
+  bool Has(Entity entity) {
+    return Has(entity, Component::TypeID());
+  }
+
+  template <class Component>
+    requires(!std::is_same_v<Component, Entity>)
+  void Remove(Entity entity) {
+    Remove(entity, Component::TypeID());
+  }
+
+  virtual ~World() = default;
+
+ protected:
+  virtual void Add(Entity entity, std::size_t component_type) = 0;
+  virtual void Remove(Entity entity, std::size_t component_type) = 0;
+  virtual bool Has(Entity entity, std::size_t component_type) const = 0;
+  virtual internal::ComponentBase &Get(Entity entity,
+                                       std::size_t component_type) = 0;
+  virtual const internal::ComponentBase &Get(
+      Entity entity, std::size_t component_type) const = 0;
 };
 
 }  // namespace ecsify

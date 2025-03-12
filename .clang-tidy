@@ -10,7 +10,9 @@ Checks: >
   -modernize-use-trailing-return-type,
   -readability-implicit-bool-conversion,
   -clang-analyzer-deadcode*,
-  -
+  -cppcoreguidelines-rvalue-reference-param-not-moved,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -readability-function-cognitive-complexity
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle: file
