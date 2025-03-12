@@ -1,16 +1,13 @@
-#include <ecsify/world.h>
+#include "ecsify/component.h"
 
-struct Position {
+struct Position : ecsify::ComponentMixin<1> {
   float x, y;
 };
 
-struct Velocity {
+struct Velocity : ecsify::ComponentMixin<2> {
   float x, y;
 };
-
-using MyWorld = ecsify::MakeWorld::WithComponents<Position, Velocity>;
 
 int main() {
-  MyWorld world{};
   return 0;
 }

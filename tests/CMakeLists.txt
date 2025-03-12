@@ -16,7 +16,6 @@ if(${ECSIFY_ENABLE_COVERAGE})
 endif()
 target_link_libraries(ecsify_tests PRIVATE
     gtest::gtest
-    ecsify
 )
 add_test(
     NAME ecsify_tests

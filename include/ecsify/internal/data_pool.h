@@ -8,7 +8,6 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -92,10 +91,6 @@ bool operator!=(const MaskGuidedIterator<IterT, MaskT> &lhs,
 }
 
 template <class T>
-  requires(std::default_initializable<T>)
-const auto kDefaultCtor = []() { return T(); };
-
-template <class T>
   requires(std::default_initializable<T> && std::copyable<T>)
 class Bucket final {
  public:
@@ -110,21 +105,11 @@ class Bucket final {
       MaskGuidedIterator<typename std::array<T, Capacity()>::const_iterator,
                          Mask>;
 
-  explicit Bucket(const T &val) { std::ranges::fill(data_, val); }
-
-  std::size_t Insert(const T &val) noexcept(
+  std::size_t Insert() noexcept(
       noexcept(std::declval<T &>() = std::declval<T &>())) {
     assert(!Full() && "Bucket is full");
     std::size_t offset = std::countr_zero(free_elements_mask_);
-    data_[offset] = val;
-    free_elements_mask_ &= ~GetMaskWithNthBitSet(offset);
-    return offset;
-  }
-
-  std::size_t Insert(T &&val) noexcept {
-    assert(!Full() && "Bucket is full");
-    std::size_t offset = std::countr_zero(free_elements_mask_);
-    data_[offset] = std::move(val);
+    data_[offset] = T{};
     free_elements_mask_ &= ~GetMaskWithNthBitSet(offset);
     return offset;
   }
@@ -181,9 +166,9 @@ template <class T>
 using IteratorValueType = typename std::iterator_traits<T>::value_type;
 
 template <class T>
-concept ContainerLike = requires(T c) {
-  { std::begin(c) } -> std::input_or_output_iterator;
-  { std::end(c) } -> std::input_or_output_iterator;
+concept ContainerLike = requires(T container) {
+  { std::begin(container) } -> std::input_or_output_iterator;
+  { std::end(container) } -> std::input_or_output_iterator;
 };
 
 template <class T>
@@ -273,49 +258,22 @@ class DataPool final {
   using ConstIterator =
       FlattenedIterator<typename std::vector<Bucket<T>>::const_iterator>;
 
-  explicit DataPool(std::function<T()> initializer = kDefaultCtor<T>)
-      : initializer_{initializer} {}
-
   /**
-   * @brief Inserts a new element into the DataPool.
+   * @brief Inserts a new default-constructed element into the DataPool.
    *
-   * @param val The value to be inserted.
    * @return The index of the inserted element.
    */
-  std::size_t Insert(const T &val) {
+  std::size_t Insert() {
     if (partially_filled_buckets_.empty()) {
       std::size_t bucket_idx = buckets_.size();
-      Bucket<T> &bucket = buckets_.emplace_back(initializer_());
+      Bucket<T> &bucket = buckets_.emplace_back();
       partially_filled_buckets_.push_back(bucket_idx);
-      bucket.Insert(val);
+      bucket.Insert();
       return bucket_idx * Bucket<T>::Capacity();
     }
     std::size_t bucket_idx = partially_filled_buckets_.back();
     Bucket<T> &bucket = buckets_[bucket_idx];
-    std::size_t offset = bucket.Insert(val);
-    if (bucket.Full() == 0) {
-      partially_filled_buckets_.pop_back();
-    }
-    return bucket_idx * Bucket<T>::Capacity() + offset;
-  }
-
-  /**
-   * @brief Inserts a new element into the DataPool.
-   *
-   * @param val The value to be inserted.
-   * @return The index of the inserted element.
-   */
-  std::size_t Insert(T &&val) {
-    if (partially_filled_buckets_.empty()) {
-      std::size_t bucket_idx = buckets_.size();
-      Bucket<T> &bucket = buckets_.emplace_back(initializer_());
-      partially_filled_buckets_.push_back(bucket_idx);
-      bucket.Insert(std::move(val));
-      return bucket_idx * Bucket<T>::Capacity();
-    }
-    std::size_t bucket_idx = partially_filled_buckets_.back();
-    Bucket<T> &bucket = buckets_[bucket_idx];
-    std::size_t offset = bucket.Insert(std::move(val));
+    std::size_t offset = bucket.Insert();
     if (bucket.Full() == 0) {
       partially_filled_buckets_.pop_back();
     }
@@ -414,7 +372,6 @@ class DataPool final {
  private:
   std::vector<Bucket<T>> buckets_;
   std::vector<std::size_t> partially_filled_buckets_;
-  std::function<T()> initializer_;
 };
 
 }  // namespace ecsify::internal

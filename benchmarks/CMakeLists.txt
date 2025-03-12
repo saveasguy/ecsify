@@ -11,5 +11,4 @@ add_executable(ecsify_benchmarks
 
 target_link_libraries(ecsify_benchmarks PRIVATE
     benchmark::benchmark_main
-    ecsify
 )
