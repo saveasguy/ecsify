@@ -8,7 +8,6 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <limits>
 #include <utility>
@@ -92,10 +91,6 @@ bool operator!=(const MaskGuidedIterator<IterT, MaskT> &lhs,
 }
 
 template <class T>
-  requires(std::default_initializable<T>)
-const auto kDefaultCtor = []() { return T(); };
-
-template <class T>
   requires(std::default_initializable<T> && std::copyable<T>)
 class Bucket final {
  public:
@@ -109,8 +104,6 @@ class Bucket final {
   using ConstIterator =
       MaskGuidedIterator<typename std::array<T, Capacity()>::const_iterator,
                          Mask>;
-
-  explicit Bucket(const T &val) { std::ranges::fill(data_, val); }
 
   std::size_t Insert(const T &val) noexcept(
       noexcept(std::declval<T &>() = std::declval<T &>())) {
@@ -181,9 +174,9 @@ template <class T>
 using IteratorValueType = typename std::iterator_traits<T>::value_type;
 
 template <class T>
-concept ContainerLike = requires(T c) {
-  { std::begin(c) } -> std::input_or_output_iterator;
-  { std::end(c) } -> std::input_or_output_iterator;
+concept ContainerLike = requires(T container) {
+  { std::begin(container) } -> std::input_or_output_iterator;
+  { std::end(container) } -> std::input_or_output_iterator;
 };
 
 template <class T>
@@ -273,9 +266,6 @@ class DataPool final {
   using ConstIterator =
       FlattenedIterator<typename std::vector<Bucket<T>>::const_iterator>;
 
-  explicit DataPool(std::function<T()> initializer = kDefaultCtor<T>)
-      : initializer_{initializer} {}
-
   /**
    * @brief Inserts a new element into the DataPool.
    *
@@ -285,7 +275,7 @@ class DataPool final {
   std::size_t Insert(const T &val) {
     if (partially_filled_buckets_.empty()) {
       std::size_t bucket_idx = buckets_.size();
-      Bucket<T> &bucket = buckets_.emplace_back(initializer_());
+      Bucket<T> &bucket = buckets_.emplace_back();
       partially_filled_buckets_.push_back(bucket_idx);
       bucket.Insert(val);
       return bucket_idx * Bucket<T>::Capacity();
@@ -308,7 +298,7 @@ class DataPool final {
   std::size_t Insert(T &&val) {
     if (partially_filled_buckets_.empty()) {
       std::size_t bucket_idx = buckets_.size();
-      Bucket<T> &bucket = buckets_.emplace_back(initializer_());
+      Bucket<T> &bucket = buckets_.emplace_back();
       partially_filled_buckets_.push_back(bucket_idx);
       bucket.Insert(std::move(val));
       return bucket_idx * Bucket<T>::Capacity();
@@ -414,7 +404,6 @@ class DataPool final {
  private:
   std::vector<Bucket<T>> buckets_;
   std::vector<std::size_t> partially_filled_buckets_;
-  std::function<T()> initializer_;
 };
 
 }  // namespace ecsify::internal

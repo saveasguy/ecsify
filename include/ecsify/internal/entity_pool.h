@@ -1,69 +1,82 @@
 #ifndef ECSIFY_INCLUDE_ECSIFY_INTERNAL_ENTITY_POOL_H_
 #define ECSIFY_INCLUDE_ECSIFY_INTERNAL_ENTITY_POOL_H_
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 
 #include "ecsify/entity.h"
 #include "ecsify/internal/data_pool.h"
 
 namespace ecsify::internal {
 
+template <std::size_t N>
 class EntityData final {
  public:
-  EntityData();
-  explicit EntityData(std::size_t num_component_types);
-  EntityData(const EntityData &other) = default;
-  EntityData(EntityData &&other) noexcept = default;
-  EntityData &operator=(const EntityData &other);
-  EntityData &operator=(EntityData &&other) noexcept;
-  ~EntityData() = default;
+  EntityData() : archetype_{}, id_{-1} {}
+  explicit EntityData(std::int64_t unique_id) : archetype_{}, id_{unique_id} {}
 
-  void Link(std::size_t component_type) noexcept;
-  void Unlink(std::size_t component_type) noexcept;
-  bool Has(std::size_t component_type) const noexcept;
+  void Link(std::size_t component_type) noexcept {
+    assert(component_type < archetype_.size() && "Unknown component type");
+    archetype_[component_type] = true;
+  }
+
+  void Unlink(std::size_t component_type) noexcept {
+    assert(component_type < archetype_.size() && "Unknown component type");
+    archetype_[component_type] = false;
+  }
+
+  bool Has(std::size_t component_type) const noexcept {
+    assert(component_type < archetype_.size() && "Unknown component type");
+    return archetype_[component_type];
+  }
 
   std::int64_t id() const noexcept { return id_; }
 
  private:
-  friend EntityData MakeNonAllocEntityData(std::int64_t);
-
-  struct NonAllocTag {};
-
-  // Constructs dummy entity data, which is ignored when copied/moved.
-  explicit EntityData(std::int64_t unique_id, NonAllocTag);
-
-  void UnlinkAll() noexcept;
-
-  std::vector<bool> component_types_;
+  Archetype<N> archetype_;
   std::int64_t id_;
-  bool is_non_alloc_;
 };
 
-EntityData MakeNonAllocEntityData(std::int64_t unique_id);
-
+template <std::size_t N>
 class EntityPool {
  public:
-  /**
-   * @brief Constructs an EntityPool.
-   *
-   * @param num_component_types The number of different component types
-   * that entities should handle.
-   */
-  explicit EntityPool(std::size_t num_component_types);
+  Entity Add() {
+    std::int64_t unique_id = next_entity_id_++;
+    std::size_t handle = entities_.Insert(EntityData<N>(unique_id));
+    return Entity{unique_id, handle};
+  }
 
-  Entity Add();
-  void Remove(Entity entity);
-  bool Alive(Entity entity) const noexcept;
+  void Remove(Entity entity) { entities_.Erase(entity.handle()); }
 
-  void Link(Entity entity, std::size_t component_type) noexcept;
-  void Unlink(Entity entity, std::size_t component_type) noexcept;
-  bool Has(Entity entity, std::size_t component_type) const noexcept;
+  bool Alive(Entity entity) const noexcept {
+    if (!entities_.Contains(entity.handle())) {
+      return false;
+    }
+    return entities_[entity.handle()].id() == entity.id();
+  }
+
+  void Link(Entity entity, std::size_t component_type) noexcept {
+    if (!Alive(entity)) {
+      return;
+    }
+    entities_[entity.handle()].Link(component_type);
+  }
+
+  void Unlink(Entity entity, std::size_t component_type) noexcept {
+    if (!Alive(entity)) {
+      return;
+    }
+    entities_[entity.handle()].Unlink(component_type);
+  }
+
+  bool Has(Entity entity, std::size_t component_type) const noexcept {
+    return entities_[entity.handle()].Has(component_type);
+  }
 
  private:
-  internal::DataPool<EntityData> entities_;
-  std::int64_t next_entity_id_;
+  internal::DataPool<EntityData<N>> entities_{};
+  std::int64_t next_entity_id_{0};
 };
 
 }  // namespace ecsify::internal

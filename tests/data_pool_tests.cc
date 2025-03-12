@@ -10,7 +10,7 @@
 #include "ecsify/internal/data_pool.h"
 
 TEST(BucketTests, ContainsInserted) {
-  ecsify::internal::Bucket<int> bucket{0};
+  ecsify::internal::Bucket<int> bucket;
   std::size_t idx0 = bucket.Insert(1);
   ASSERT_TRUE(bucket.Contains(idx0));
   std::size_t idx1 = bucket.Insert(2);
@@ -25,7 +25,7 @@ TEST(BucketTests, ContainsInserted) {
 }
 
 TEST(BucketTests, InsertionIsCorrect) {
-  ecsify::internal::Bucket<int> bucket{0};
+  ecsify::internal::Bucket<int> bucket;
   std::size_t idx0 = bucket.Insert(1);
   ASSERT_EQ(bucket[idx0], 1);
   std::size_t idx1 = bucket.Insert(2);
@@ -38,7 +38,7 @@ TEST(BucketTests, InsertionIsCorrect) {
 }
 
 TEST(BucketTests, FullWhenCapacityReached) {
-  ecsify::internal::Bucket<std::size_t> bucket{0};
+  ecsify::internal::Bucket<std::size_t> bucket;
   for (std::size_t i = 0; i < ecsify::internal::Bucket<std::size_t>::Capacity();
        ++i) {
     ASSERT_FALSE(bucket.Full());
@@ -48,7 +48,7 @@ TEST(BucketTests, FullWhenCapacityReached) {
 }
 
 TEST(BucketTests, DoesntContainNotInserted) {
-  ecsify::internal::Bucket<int> bucket{0};
+  ecsify::internal::Bucket<int> bucket;
   ASSERT_FALSE(bucket.Contains(0));
   ASSERT_FALSE(bucket.Contains(1));
   bucket.Insert(1);
@@ -56,7 +56,7 @@ TEST(BucketTests, DoesntContainNotInserted) {
 }
 
 TEST(BucketTests, ErasureIsCorrect) {
-  ecsify::internal::Bucket<int> bucket{0};
+  ecsify::internal::Bucket<int> bucket;
   std::size_t idx0 = bucket.Insert(1);
   std::size_t idx1 = bucket.Insert(2);
   bucket.Erase(idx0);
@@ -68,7 +68,7 @@ TEST(BucketTests, ErasureIsCorrect) {
 }
 
 TEST(BucketTests, InsertionIsCorrectAfterErasure) {
-  ecsify::internal::Bucket<int> bucket{0};
+  ecsify::internal::Bucket<int> bucket;
   std::size_t idx0 = bucket.Insert(1);
   std::size_t idx1 = bucket.Insert(2);
   bucket.Erase(idx0);
@@ -81,7 +81,7 @@ TEST(BucketTests, InsertionIsCorrectAfterErasure) {
 TEST(BucketTests, NumIterationsIsCorrect) {
   constexpr std::size_t kCapacity = ecsify::internal::Bucket<int>::Capacity();
   for (std::size_t size : std::views::iota(0UZ, kCapacity + 1)) {
-    ecsify::internal::Bucket<int> bucket{0};
+    ecsify::internal::Bucket<int> bucket;
     for (std::size_t _ : std::views::iota(0UZ, size)) {
       bucket.Insert(0);
     }
@@ -97,7 +97,7 @@ TEST(BucketTests, AllValuesAreIterated) {
   constexpr std::size_t kCapacity =
       ecsify::internal::Bucket<std::size_t>::Capacity();
   std::set<std::size_t> vals;
-  ecsify::internal::Bucket<std::size_t> bucket{0};
+  ecsify::internal::Bucket<std::size_t> bucket;
   std::vector<std::size_t> indices;
   // First, check if all the values are iterated.
   for (std::size_t i = 0; i < kCapacity; ++i) {

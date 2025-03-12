@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 project(ecsify)
 
 include_directories(include)
-add_subdirectory(src)
 
 option(ECSIFY_BUILD_EXAMPLES "Build examples" ON)
 option(ECSIFY_BUILD_BENCHMARKS "Build benchmarks" ON)

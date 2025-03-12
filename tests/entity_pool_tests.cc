@@ -4,7 +4,7 @@
 #include "ecsify/internal/entity_pool.h"
 
 TEST(EntityPoolTests, Add) {
-  ecsify::internal::EntityPool pool(0);
+  ecsify::internal::EntityPool<0> pool;
   ecsify::Entity entity1 = pool.Add();
   ASSERT_TRUE(pool.Alive(entity1));
   ecsify::Entity entity2 = pool.Add();
@@ -13,7 +13,7 @@ TEST(EntityPoolTests, Add) {
 }
 
 TEST(EntityPoolTests, Remove) {
-  ecsify::internal::EntityPool pool(0);
+  ecsify::internal::EntityPool<0> pool;
   ecsify::Entity entity1 = pool.Add();
   ecsify::Entity entity2 = pool.Add();
   pool.Remove(entity1);
@@ -24,7 +24,7 @@ TEST(EntityPoolTests, Remove) {
 }
 
 TEST(EntityPoolTests, Link) {
-  ecsify::internal::EntityPool pool(2);
+  ecsify::internal::EntityPool<2> pool;
   ecsify::Entity entity = pool.Add();
   pool.Link(entity, 0);
   ASSERT_TRUE(pool.Has(entity, 0));
@@ -40,7 +40,7 @@ TEST(EntityPoolTests, Link) {
 }
 
 TEST(EntityPoolTests, Unlink) {
-  ecsify::internal::EntityPool pool(2);
+  ecsify::internal::EntityPool<2> pool;
   ecsify::Entity entity = pool.Add();
   pool.Link(entity, 0);
   pool.Link(entity, 1);
