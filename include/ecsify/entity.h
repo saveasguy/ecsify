@@ -6,15 +6,8 @@
 #include <cstdint>
 
 #include "ecsify/component.h"
-
 namespace ecsify {
 
-namespace internal {
-
-template <std::size_t N>
-using Archetype = std::bitset<N>;
-
-}  // namespace internal
 
 class Entity final : public ComponentMixin<0> {
  public:

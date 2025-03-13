@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "ecsify/entity.h"
+#include "ecsify/internal/archetype.h"
 #include "ecsify/internal/data_pool.h"
 
 namespace ecsify::internal {
@@ -18,17 +19,17 @@ class EntityData final {
 
   void Link(std::size_t component_type) noexcept {
     assert(component_type < archetype_.size() && "Unknown component type");
-    archetype_[component_type] = true;
+    Set(archetype_, component_type);
   }
 
   void Unlink(std::size_t component_type) noexcept {
     assert(component_type < archetype_.size() && "Unknown component type");
-    archetype_[component_type] = false;
+    Unset(archetype_, component_type);
   }
 
   bool Has(std::size_t component_type) const noexcept {
     assert(component_type < archetype_.size() && "Unknown component type");
-    return archetype_[component_type];
+    return Get(archetype_, component_type);
   }
 
   std::int64_t id() const noexcept { return id_; }
