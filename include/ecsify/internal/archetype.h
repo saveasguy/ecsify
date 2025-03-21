@@ -119,6 +119,15 @@ class Archetype {
     return result;
   }
 
+  bool IsPrefix(const Archetype<Bits> &other) const noexcept {
+    for (auto [val, other_val] : std::views::zip(data_, other.data_)) {
+      if (val & other_val != val) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   std::size_t Size() const noexcept { return Bits; }
 
   ArchetypeIterator<Bits> begin() { return ArchetypeIterator(this, 0); }

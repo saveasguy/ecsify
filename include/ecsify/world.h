@@ -2,6 +2,8 @@
 #define ECSIFY_INCLUDE_ECSIFY_WORLD_H_
 
 #include <cstddef>
+#include <ranges>
+#include <span>
 
 #include "ecsify/component.h"
 #include "ecsify/entity.h"
@@ -47,6 +49,13 @@ class World {
     Remove(entity, Component::TypeID());
   }
 
+  template <class... Components>
+  auto Query() {
+    std::array<std::size_t, sizeof...(Components)> component_ids = {Components::TypeID()...};
+    return std::views::zip(CastQuery<Components>(
+        QueryOne(Components::TypeID(), component_ids))...);
+  }
+
   virtual ~World() = default;
 
  protected:
@@ -57,6 +66,18 @@ class World {
                                        std::size_t component_type) = 0;
   virtual const internal::ComponentBase &Get(
       Entity entity, std::size_t component_type) const = 0;
+
+  virtual std::span<internal::ComponentBase *> QueryOne(
+      std::size_t component_type, std::span<std::size_t> component_ids) = 0;
+
+ private:
+  template <class Component>
+  static auto CastQuery(std::span<internal::ComponentBase *> query) {
+    return query | std::views::transform(
+                       [](internal::ComponentBase *component) -> Component & {
+                         return *static_cast<Component *>(component);
+                       });
+  }
 };
 
 }  // namespace ecsify

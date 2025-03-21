@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <unordered_map>
 
 #include "ecsify/component.h"
@@ -25,6 +26,7 @@ struct ComponentPoolBase {
   virtual std::size_t Move(const Archetype<N> &old_archetype,
                            std::size_t handle,
                            const Archetype<N> &new_archetype) = 0;
+  virtual std::span<ComponentBase *> Query(const Archetype<N> &archetype) = 0;
 };
 
 template <std::size_t N>
@@ -43,6 +45,7 @@ class ComponentPool final : public ComponentPoolBase<N> {
   }
 
   std::size_t Add(const Archetype<N> &archetype) override {
+    query_cache_.clear();
     return components_[archetype].Insert();
   }
 
@@ -51,6 +54,7 @@ class ComponentPool final : public ComponentPoolBase<N> {
       return;
     }
     components_[archetype].Erase(handle);
+    query_cache_.clear();
   }
 
   std::size_t Move(const Archetype<N> &old_archetype, std::size_t handle,
@@ -58,11 +62,27 @@ class ComponentPool final : public ComponentPoolBase<N> {
     T tmp = std::move(components_[old_archetype][handle]);
     std::size_t new_handle = components_[new_archetype].Insert();
     components_[new_archetype][new_handle] = std::move(tmp);
+    query_cache_.clear();
     return new_handle;
+  }
+
+  std::span<ComponentBase *> Query(const Archetype<N> &archetype) override {
+    if (!query_cache_.empty()) {
+      return query_cache_;
+    }
+    for (auto &[key_archetype, pool] : components_) {
+      if (archetype.IsPrefix(key_archetype)) {
+        for (T &component : pool) {
+          query_cache_.push_back(&component);
+        }
+      }
+    }
+    return std::span<ComponentBase *>{query_cache_.begin(), query_cache_.end()};
   }
 
  private:
   std::unordered_map<Archetype<N>, DataPool<T>> components_;
+  mutable std::vector<ComponentBase *> query_cache_;
 };
 
 }  // namespace ecsify::internal

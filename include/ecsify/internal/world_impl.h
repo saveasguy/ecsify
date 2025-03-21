@@ -28,6 +28,8 @@ class WorldImpl : public World {
     std::size_t handle =
         components_[Entity::TypeID()]->Add(entity_data.archetype());
     entity_data.component_handle(handle);
+    static_cast<Entity &>(components_[Entity::TypeID()]->Get(
+        entity_data.archetype(), handle)) = entity;
     return entity;
   }
 
@@ -102,9 +104,20 @@ class WorldImpl : public World {
     return entities_[entity].Has(component_type);
   }
 
+  std::span<internal::ComponentBase *> QueryOne(
+      std::size_t component_type,
+      std::span<std::size_t> component_ids) override {
+    Archetype<N> archetype;
+    for (std::size_t id : component_ids) {
+      archetype.Set(id);
+    }
+    return components_[component_type]->Query(archetype);
+  }
+
  private:
   EntityPool<N> entities_{};
   std::array<std::unique_ptr<ComponentPoolBase<N>>, N> components_;
+  std::vector<std::pair<Entity, std::size_t>> deferred_add_;
 };
 
 }  // namespace ecsify::internal
