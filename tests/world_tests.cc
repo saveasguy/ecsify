@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <set>
+
 #include "ecsify/component.h"
 #include "ecsify/entity.h"
 #include "ecsify/world_builder.h"
@@ -103,4 +106,30 @@ TEST(WorldTests, ValuesArePreservedOnOperations) {
   ASSERT_EQ(world->Get<Int>(entt2).val, int2.val);
   world->Remove(entt1);
   ASSERT_EQ(world->Get<Int>(entt2).val, int2.val);
+}
+
+TEST(WorldTests, Queries) {
+  Int int1{.val = 1};
+  Int int2{.val = 2};
+
+  auto world = ecsify::WorldBuilder{}.Component<Int>().Build();
+  ecsify::Entity entt1 = world->Add();
+  world->Add<Int>(entt1);
+  world->Get<Int>(entt1) = int1;
+  ecsify::Entity entt2 = world->Add();
+  world->Add<Int>(entt2);
+  world->Get<Int>(entt2) = int2;
+  ecsify::Entity entt3 = world->Add();
+
+  std::set<std::int64_t> queried_entity_ids = {entt1.id(), entt2.id()};
+  std::set<int> queried_int_vals = {int1.val, int2.val};
+
+  for (auto [entt, val] : world->Query<ecsify::Entity, Int>()) {
+    ASSERT_TRUE(queried_entity_ids.contains(entt.id()));
+    ASSERT_TRUE(queried_int_vals.contains(val.val));
+    queried_entity_ids.erase(entt.id());
+    queried_int_vals.erase(val.val);
+  }
+  ASSERT_TRUE(queried_entity_ids.empty());
+  ASSERT_TRUE(queried_int_vals.empty());
 }

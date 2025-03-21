@@ -1,1 +1,1 @@
-add_executable(ecsify_world_example my_world.cc)
+add_executable(ecsify_world_example world_example.cc)
