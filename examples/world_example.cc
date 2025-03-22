@@ -13,8 +13,8 @@ struct Velocity : ecsify::ComponentMixin<2> {
   float x, y;
 };
 
-ecsify::Entity CreateTurtle(ecsify::World &world, float posx, float posy, float velx,
-                            float vely) {
+ecsify::Entity CreateTurtle(ecsify::World &world, float posx, float posy,
+                            float velx, float vely) {
   ecsify::Entity turtle = world.Add();
   world.Add<Position>(turtle);
   world.Get<Position>(turtle) = Position{.x = posx, .y = posy};
@@ -23,22 +23,29 @@ ecsify::Entity CreateTurtle(ecsify::World &world, float posx, float posy, float 
   return turtle;
 }
 
+void MoveTurtles(ecsify::World &world) {
+  for (auto [entt, pos, vel] :
+       world.Query<ecsify::Entity, Position, Velocity>()) {
+    pos.x += vel.x;
+    pos.y += vel.y;
+    std::cout << "Turtle #" << entt.id() << " moved to (" << pos.x << ", "
+              << pos.y << ")\n";
+  }
+}
+
 int main() {
-  auto world = ecsify::WorldBuilder{}
-                   .Component<Position>()
-                   .Component<Velocity>()
-                   .Build();
+  const auto world = ecsify::WorldBuilder{}
+                         .Component<Position>()
+                         .Component<Velocity>()
+                         .System(MoveTurtles)
+                         .Build();
 
   CreateTurtle(*world, 0, 0, 1, 1);
   CreateTurtle(*world, 2, 3, 1, 0);
 
   constexpr int kIter = 10;
   for (int i = 0; i < kIter; ++i) {
-    for (auto [entt, pos, vel] : world->Query<ecsify::Entity, Position, Velocity>()) {
-      pos.x += vel.x;
-      pos.y += vel.y;
-      std::cout << "Turtle #" << entt.id() << " moved to (" << pos.x << ", " << pos.y << ")\n";
-    }
+    world->Update();
   }
   return 0;
 }

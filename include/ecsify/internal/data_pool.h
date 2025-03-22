@@ -1,7 +1,6 @@
 #ifndef ECSIFY_INCLUDE_ECSIFY_INTERNAL_DATA_POOL_H_
 #define ECSIFY_INCLUDE_ECSIFY_INTERNAL_DATA_POOL_H_
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cassert>

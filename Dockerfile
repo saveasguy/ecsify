@@ -7,6 +7,8 @@ RUN wget https://apt.llvm.org/llvm.sh
 RUN chmod +x llvm.sh
 RUN ./llvm.sh 18 all
 
+RUN apt install -y cmake
+
 RUN mkdir -p /usr/src/ecsify
 WORKDIR /usr/src/ecsify
 

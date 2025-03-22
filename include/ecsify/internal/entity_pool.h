@@ -14,8 +14,8 @@ namespace ecsify::internal {
 template <std::size_t N>
 class EntityData final {
  public:
-  EntityData() : archetype_{}, id_{-1} {}
-  explicit EntityData(std::int64_t unique_id) : archetype_{}, id_{unique_id} {}
+  EntityData() : id_{-1} {}
+  explicit EntityData(std::int64_t unique_id) : id_{unique_id} {}
 
   bool Has(std::size_t component_type) const noexcept {
     assert(component_type < archetype_.Size() && "Unknown component type");
@@ -43,9 +43,9 @@ class EntityData final {
   const Archetype<N> &archetype() const noexcept { return archetype_; }
 
  private:
-  Archetype<N> archetype_;
+  Archetype<N> archetype_{};
   std::int64_t id_;
-  std::size_t component_handle_;
+  std::size_t component_handle_{};
 };
 
 template <std::size_t N>

@@ -5,6 +5,8 @@
 #include <memory>
 #include <span>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "ecsify/component.h"
 #include "ecsify/internal/archetype.h"

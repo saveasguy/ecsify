@@ -3,9 +3,14 @@
 
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <ranges>
+#include <span>
+#include <utility>
+#include <vector>
 
+#include "ecsify/component.h"
 #include "ecsify/entity.h"
 #include "ecsify/internal/archetype.h"
 #include "ecsify/internal/component_pool.h"
@@ -14,11 +19,14 @@
 
 namespace ecsify::internal {
 
+using SystemFunctionType = std::function<void(World &)>;
+
 template <std::size_t N>
 class WorldImpl : public World {
  public:
-  explicit WorldImpl(std::array<ComponentPoolRef<N>, N> pools)
-      : components_{std::move(pools)} {}
+  explicit WorldImpl(std::array<ComponentPoolRef<N>, N> pools,
+                     std::vector<SystemFunctionType> systems)
+      : components_{std::move(pools)}, systems_{std::move(systems)} {}
 
  protected:
   Entity Add() override {
@@ -75,7 +83,7 @@ class WorldImpl : public World {
     const Archetype<N> &archetype = entity_data.archetype();
     components_[component_type]->Remove(archetype,
                                         entity_data.component_handle());
-    std::size_t new_handle;
+    std::size_t new_handle = 0;
     for (auto [has, pool] : std::views::zip(old_archetype, components_)) {
       if (has) {
         new_handle = pool->Move(old_archetype, handle, archetype);
@@ -108,16 +116,22 @@ class WorldImpl : public World {
       std::size_t component_type,
       std::span<std::size_t> component_ids) override {
     Archetype<N> archetype;
-    for (std::size_t id : component_ids) {
-      archetype.Set(id);
+    for (std::size_t component_id : component_ids) {
+      archetype.Set(component_id);
     }
     return components_[component_type]->Query(archetype);
+  }
+
+  void Update() override {
+    for (const SystemFunctionType &system : systems_) {
+      system(*this);
+    }
   }
 
  private:
   EntityPool<N> entities_{};
   std::array<std::unique_ptr<ComponentPoolBase<N>>, N> components_;
-  std::vector<std::pair<Entity, std::size_t>> deferred_add_;
+  std::vector<SystemFunctionType> systems_;
 };
 
 }  // namespace ecsify::internal

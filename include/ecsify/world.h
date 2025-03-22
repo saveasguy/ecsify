@@ -1,6 +1,7 @@
 #ifndef ECSIFY_INCLUDE_ECSIFY_WORLD_H_
 #define ECSIFY_INCLUDE_ECSIFY_WORLD_H_
 
+#include <array>
 #include <cstddef>
 #include <ranges>
 #include <span>
@@ -51,10 +52,13 @@ class World {
 
   template <class... Components>
   auto Query() {
-    std::array<std::size_t, sizeof...(Components)> component_ids = {Components::TypeID()...};
+    std::array<std::size_t, sizeof...(Components)> component_ids = {
+        Components::TypeID()...};
     return std::views::zip(CastQuery<Components>(
         QueryOne(Components::TypeID(), component_ids))...);
   }
+
+  virtual void Update() = 0;
 
   virtual ~World() = default;
 

@@ -16,10 +16,13 @@ struct Velocity : ecsify::ComponentMixin<2> {
   float x, y;
 };
 
+void MoveSystem(ecsify::World &world);
+
 auto BuildTheWorld() {
   return ecsify::WorldBuilder{}
              .Component<Position>()
              .Component<Velocity>()
+             .System(MoveSystem)
              .Build();
 }
 ```
@@ -36,5 +39,16 @@ ecsify::Entity CreateTurtle(ecsify::World &world) {
   world.Add<Velocity>(turtle);
   world.Get<Velocity>(turtle) = Velocity{.x = 1, .y = 1};
   return turtle;
+}
+```
+
+Then we are to write a system, which works on the created entities and components:
+```C++
+void MoveTurtles(ecsify::World &world) {
+    for (auto [entt, pos, vel] : world.Query<ecsify::Entity, Position, Velocity>()) {
+      pos.x += vel.x;
+      pos.y += vel.y;
+      std::cout << "Turtle #" << entt.id() << " moved to (" << pos.x << ", " << pos.y << ")\n";
+    }
 }
 ```
