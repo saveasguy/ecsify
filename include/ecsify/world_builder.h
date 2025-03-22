@@ -6,6 +6,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "ecsify/entity.h"
 #include "ecsify/internal/component_pool.h"
@@ -48,15 +49,29 @@ template <class... Components>
   requires(internal::sequential_components_v<Entity, Components...>)
 class WorldBuilder final {
  public:
+  WorldBuilder() {}
+  explicit WorldBuilder(std::vector<internal::SystemFunctionType> systems)
+      : systems_{std::move(systems)} {}
+
   template <class T>
-  WorldBuilder<Components..., T> Component() const noexcept {
-    return WorldBuilder<Components..., T>{};
+  WorldBuilder<Components..., T> Component() noexcept {
+    return WorldBuilder<Components..., T>{std::move(systems_)};
   }
 
-  std::unique_ptr<World> Build() const {
-    return std::make_unique<internal::WorldImpl<1 + sizeof...(Components)>>(
-        internal::MakeComponentPools<Entity, Components...>());
+  template <class T>
+  WorldBuilder &System(T &&system) {
+    systems_.emplace_back(std::forward<T>(system));
+    return *this;
   }
+
+  std::unique_ptr<World> Build() {
+    return std::make_unique<internal::WorldImpl<1 + sizeof...(Components)>>(
+        internal::MakeComponentPools<Entity, Components...>(),
+        std::move(systems_));
+  }
+
+ private:
+  std::vector<internal::SystemFunctionType> systems_;
 };
 
 }  // namespace ecsify

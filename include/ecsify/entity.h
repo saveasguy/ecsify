@@ -1,7 +1,6 @@
 #ifndef ECSIFY_INCLUDE_ECSIFY_ENTITY_H_
 #define ECSIFY_INCLUDE_ECSIFY_ENTITY_H_
 
-#include <bitset>
 #include <cstddef>
 #include <cstdint>
 

@@ -1,10 +1,12 @@
 #ifndef ECSIFY_INCLUDE_ECSIFY_INTERNAL_ARCHETYPE_H_
 #define ECSIFY_INCLUDE_ECSIFY_INTERNAL_ARCHETYPE_H_
 
-#include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <iterator>
 #include <limits>
 #include <ranges>
 
